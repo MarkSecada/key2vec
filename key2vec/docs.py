@@ -42,8 +42,36 @@ class Document(object):
         return vector / (i + 1)
 
 class Phrase(Document):
+    """Phrase to be embedded. Inherits from Document object.
 
-    def __init__(self, text, glove, parent):
+    Parameters
+    ----------
+    text : str, required
+        The text to be embedded
+    glove : Glove, required
+        GloVe embeddings
+    parent : Document, required
+        Document where the Phrase is from
+
+    Attributes
+    ----------
+    text : str
+    dim : int
+    embedding : np.float64
+    parent : Document
+    similarity : float
+        Cosine similarity between the parent document and the phrase.
+    score : float, None
+        Min/Max scaling of the cosine similarity in relation to the
+        other candidate keyphrases.
+    rank : int, None
+        Phrase ranking with respect to the score in descending order.
+    """
+
+    def __init__(self, 
+                text: str, 
+                glove: Glove, 
+                parent: Document) -> None:
         super().__init__(text, glove)
         self.parent = parent
         self.similarity = self.__cosine_similarity(parent.embedding,
@@ -51,11 +79,15 @@ class Phrase(Document):
         self.score = None
         self.rank = None
 
-    def set_score(self, min_, max_):
+    def set_score(self, 
+                min_: float, 
+                max_: float) -> None:
         diff = max_ - min_
         self.score = (self.similarity - min_) / diff
 
-    def __cosine_similarity(self, a, b):
+    def __cosine_similarity(self, 
+                a: np.float64, 
+                b: np.float64) -> float:
         norm_a = np.linalg.norm(a)
         norm_b = np.linalg.norm(b)
         if norm_b == 0:

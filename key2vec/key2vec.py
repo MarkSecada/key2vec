@@ -45,7 +45,6 @@ class Key2Vec(object):
             ents_to_ignore: List[str]=['DATE', 'TIME', 
             'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 
             'CARDINAL']) -> None:
-
         """Extracts candidate phrases from the text. Sets
         `candidates` attributes to a list of Phrase objects.
  
@@ -57,7 +56,8 @@ class Key2Vec(object):
             'CARDINAL'])
             Named entities to ignore during the candidate
             selection process.
-        """  
+        """ 
+
         sentences = sent_tokenize(self.doc.text)
         candidates = {}
         for sentence in sentences:
@@ -87,6 +87,7 @@ class Key2Vec(object):
             Sorted list of candidates in reverse order. Returns `top_n`
             Phrase objects.
         """
+        
         if top_n < 1:
             raise ValueError('`top_n` must be greater than 1.')
 
