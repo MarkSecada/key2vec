@@ -9,8 +9,9 @@ import os
 
 from nltk import sent_tokenize, wordpunct_tokenize
 from typing import Dict, List
-from .glove import Glove
+from .cleaner import Cleaner
 from .docs import Document, Phrase
+from .glove import Glove
 
 NLP = en_core_web_sm.load()
 
@@ -41,7 +42,7 @@ class Key2Vec(object):
         self.glove = glove
         self.candidates = []
 
-    def extract_candidates(self, 
+     def extract_candidates(self, 
             ents_to_ignore: List[str]=['DATE', 'TIME', 
             'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 
             'CARDINAL']) -> None:
@@ -87,7 +88,7 @@ class Key2Vec(object):
             Sorted list of candidates in reverse order. Returns `top_n`
             Phrase objects.
         """
-        
+
         if top_n < 1:
             raise ValueError('`top_n` must be greater than 1.')
 
