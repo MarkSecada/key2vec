@@ -9,5 +9,6 @@ with open('./test.txt', 'r') as f:
 m = Key2Vec(test, glove)
 m.extract_candidates()
 ranked = m.rank_candidates()
+
 for row in ranked:
     print('{}. {}'.format(row.rank, row.text))

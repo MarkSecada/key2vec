@@ -39,7 +39,7 @@ class Document(object):
                 vector += np.zeros(self.dim)
             else:
                 vector += embeddings[word]
-        return vector / (i + 1)
+        return vector / len(words)
 
 class Phrase(Document):
     """Phrase to be embedded. Inherits from Document object.

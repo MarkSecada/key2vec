@@ -1,15 +1,17 @@
 ## To do:
-## 1) Write function to remove illegal candidate phrasers.
+## 1) Need to write out a way to cleaned entities, nouns, etc.
 ## 2) Write function to de-duplicate final candidate list.
 
 import numpy as np
 import spacy
+import string
 import en_core_web_sm
 import os
 
 from nltk import sent_tokenize, wordpunct_tokenize
 from typing import Dict, List
 from .cleaner import Cleaner
+from .constants import ENTS_TO_IGNORE, STOPWORDS
 from .docs import Document, Phrase
 from .glove import Glove
 
@@ -42,37 +44,55 @@ class Key2Vec(object):
         self.glove = glove
         self.candidates = []
 
-     def extract_candidates(self, 
-            ents_to_ignore: List[str]=['DATE', 'TIME', 
-            'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 
-            'CARDINAL']) -> None:
+    def extract_candidates(self):
         """Extracts candidate phrases from the text. Sets
         `candidates` attributes to a list of Phrase objects.
- 
-        Parameters
-        ----------
-        ents_to_ignore : List[str], optional 
-            (List[str] = ['DATE', 'TIME', 
-            'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 
-            'CARDINAL'])
-            Named entities to ignore during the candidate
-            selection process.
         """ 
-
         sentences = sent_tokenize(self.doc.text)
         candidates = {}
         for sentence in sentences:
             doc = NLP(sentence)
-            for ent in doc.ents:
-                if ent.label_ not in ents_to_ignore:
-                    if candidates.get(ent.text, None) is None:
-                        candidates[ent.text] = Phrase(ent.text, 
-                            self.glove, self.doc)
-            for chunk in doc.noun_chunks:
-                if candidates.get(chunk.text, None) is None:
-                    candidates[chunk.text] = Phrase(chunk.text,
-                        self.glove, self.doc)
+            candidates = self.__extract_tokens(doc, candidates)
+            candidates = self.__extract_entities(doc, candidates)
+            candidates = self.__extract_noun_chunks(doc, candidates)
         self.candidates = list(candidates.values())
+
+    def __extract_tokens(self, doc, candidates):
+        for token in doc:
+            text = token.text.lower()
+            is_punct = text in string.punctuation
+            is_dash = text == '-'
+            is_stopword = text in STOPWORDS
+            in_candidates = candidates.get(text) is not None
+            if is_dash and not in_candidates:
+                candidates[text] = Phrase(token.text, self.glove,
+                    self.doc)
+            elif not (is_dash or is_stopword or in_candidates):
+                candidates[text] = Phrase(token.text, self.glove,
+                    self.doc)
+            else:
+                pass
+        return candidates
+
+    def __extract_entities(self, doc, candidates):
+        for ent in doc.ents:
+            cleaned_text = Cleaner(ent).transform_text()
+            is_ent_to_ignore = ent.label_ in ENTS_TO_IGNORE
+            in_candidates = candidates.get(cleaned_text) is not None
+            not_empty = cleaned_text != ''
+            if not (is_ent_to_ignore or in_candidates) and not_empty:
+                candidates[cleaned_text] = Phrase(ent.text, 
+                    self.glove, self.doc)
+        return candidates
+
+    def __extract_noun_chunks(self, doc, candidates):
+        for chunk in doc.noun_chunks:
+            cleaned_text = Cleaner(chunk).transform_text()
+            not_empty = cleaned_text != ''
+            if candidates.get(cleaned_text) is None and not_empty:
+                candidates[cleaned_text] = Phrase(chunk.text, 
+                    self.glove, self.doc)
+        return candidates
 
     def rank_candidates(self, top_n: int=10) -> List[Phrase]:
         """Ranks candidate keyphrases.
@@ -104,4 +124,4 @@ class Key2Vec(object):
         for i, c in enumerate(sorted_candidates):
             c.rank = i + 1
 
-        return sorted_candidates[:top_n - 1]
+        return sorted_candidates[:top_n]

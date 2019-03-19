@@ -3,6 +3,17 @@ POS_BLACKLIST = ['INTJ', 'AUX', 'CCONJ',
             'PRON', 'SCONJ', 'PUNCT',
             'SYM', 'X']
 
+ENTS_TO_IGNORE = ['DATE', 'TIME', 
+            'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 
+            'CARDINAL']
+
+DETERMINERS = ['the', 'a', 'an', 'this', 'that', 'these', 'those',
+            'my', 'your', 'his', 'her', 'its', 'our', 'their', 
+            'a few', 'a little', 'much', 'many', 'a lot of', 'most', 
+            'some', 'any', 'enough', 'one', 'ten', 'thirty', 'all', 
+            'both', 'either', 'neither', 'each', 'every', 'other', 
+            'another', 'such', 'what', 'rather', 'quite']
+
 STOPWORDS = ["word", 
     "a", "a's", "able", "about", "above", "according",
     "accordingly", "across", "actually", "after", "afterwards", 
