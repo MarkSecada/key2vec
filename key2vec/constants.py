@@ -1,11 +1,15 @@
+import string
+
+PUNCT_SET = set(string.punctuation)
+
 POS_BLACKLIST = ['INTJ', 'AUX', 'CCONJ', 
             'ADP', 'DET', 'NUM', 'PART', 
             'PRON', 'SCONJ', 'PUNCT',
             'SYM', 'X']
 
-ENTS_TO_IGNORE = ['DATE', 'TIME', 
-            'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 
-            'CARDINAL']
+ENTS_TO_IGNORE = ['DATE', 'TIME', 'PERCENT', 
+                'MONEY', 'QUANTITY', 'ORDINAL', 
+                'CARDINAL']
 
 DETERMINERS = ['the', 'a', 'an', 'this', 'that', 'these', 'those',
             'my', 'your', 'his', 'her', 'its', 'our', 'their', 

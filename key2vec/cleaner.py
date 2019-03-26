@@ -1,4 +1,4 @@
-from .constants import STOPWORDS, POS_BLACKLIST, DETERMINERS
+from .constants import STOPWORDS, POS_BLACKLIST, DETERMINERS, PUNCT_SET
 
 class Cleaner(object):
     """Cleans candidate keyphrase"""
@@ -16,7 +16,11 @@ class Cleaner(object):
                 is_stop = token.text in STOPWORDS
                 is_banned_pos = token.pos_ in POS_BLACKLIST
                 is_determiner = token.text in DETERMINERS
-                remove = (is_stop or is_banned_pos or is_determiner)
+                has_punct = not set(token.text).isdisjoint(PUNCT_SET)
+                remove = (is_stop 
+                    or is_banned_pos 
+                    or is_determiner 
+                    or has_punct)
             else:
                 pass
             if not remove:

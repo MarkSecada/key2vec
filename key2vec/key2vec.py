@@ -1,7 +1,3 @@
-## To do:
-## 1) Need to write out a way to cleaned entities, nouns, etc.
-## 2) Write function to de-duplicate final candidate list.
-
 import numpy as np
 import spacy
 import string
@@ -11,9 +7,10 @@ import os
 from nltk import sent_tokenize, wordpunct_tokenize
 from typing import Dict, List
 from .cleaner import Cleaner
-from .constants import ENTS_TO_IGNORE, STOPWORDS
+from .constants import ENTS_TO_IGNORE, STOPWORDS, PUNCT_SET
 from .docs import Document, Phrase
 from .glove import Glove
+from .phrase_graph import PhraseNode, PhraseGraph
 
 NLP = en_core_web_sm.load()
 
@@ -34,6 +31,8 @@ class Key2Vec(object):
     glove : Glove
     candidates : List[Phrase]
         List of candidate keyphrases. Initialized as an empty list.
+    candidate_graph : PhraseGraph
+        Bidrectional graph of all candidate phrases
     """
 
     def __init__(self,
@@ -43,11 +42,20 @@ class Key2Vec(object):
         self.doc = Document(text, glove)
         self.glove = glove
         self.candidates = []
+        self.candidate_graph = None
 
     def extract_candidates(self):
         """Extracts candidate phrases from the text. Sets
         `candidates` attributes to a list of Phrase objects.
         """ 
+
+        # Having a big problem with preprocessing here.
+        # When it doesn't recognize a character in the disctionary
+        # it throws a KeyError. It's right to throw those errors,
+        # since the cleaner library should remove values like
+        # those from consideration before they're added to the candidates
+        # dictionary
+
         sentences = sent_tokenize(self.doc.text)
         candidates = {}
         for sentence in sentences:
@@ -60,16 +68,13 @@ class Key2Vec(object):
     def __extract_tokens(self, doc, candidates):
         for token in doc:
             text = token.text.lower()
-            is_punct = text in string.punctuation
+            not_punct = set(text).isdisjoint(PUNCT_SET)
             is_dash = text == '-'
             is_stopword = text in STOPWORDS
             in_candidates = candidates.get(text) is not None
-            if is_dash and not in_candidates:
-                candidates[text] = Phrase(token.text, self.glove,
-                    self.doc)
-            elif not (is_dash or is_stopword or in_candidates):
-                candidates[text] = Phrase(token.text, self.glove,
-                    self.doc)
+            if not_punct and not (is_stopword or in_candidates):
+                candidates[text] = Phrase(text, self.doc, 
+                    self.glove)
             else:
                 pass
         return candidates
@@ -81,8 +86,8 @@ class Key2Vec(object):
             in_candidates = candidates.get(cleaned_text) is not None
             not_empty = cleaned_text != ''
             if not (is_ent_to_ignore or in_candidates) and not_empty:
-                candidates[cleaned_text] = Phrase(ent.text, 
-                    self.glove, self.doc)
+                candidates[cleaned_text] = Phrase(cleaned_text, self.doc,
+                    self.glove)
         return candidates
 
     def __extract_noun_chunks(self, doc, candidates):
@@ -90,11 +95,11 @@ class Key2Vec(object):
             cleaned_text = Cleaner(chunk).transform_text()
             not_empty = cleaned_text != ''
             if candidates.get(cleaned_text) is None and not_empty:
-                candidates[cleaned_text] = Phrase(chunk.text, 
-                    self.glove, self.doc)
+                candidates[cleaned_text] = Phrase(cleaned_text, 
+                    self.doc, self.glove)
         return candidates
 
-    def rank_candidates(self, top_n: int=10) -> List[Phrase]:
+    def set_theme_weights(self) -> List[Phrase]:
         """Ranks candidate keyphrases.
 
         Parameters
@@ -108,15 +113,46 @@ class Key2Vec(object):
             Sorted list of candidates in reverse order. Returns `top_n`
             Phrase objects.
         """
-
-        if top_n < 1:
-            raise ValueError('`top_n` must be greater than 1.')
-
         max_ = max([c.similarity for c in self.candidates])
         min_ = min([c.similarity for c in self.candidates])
 
         for c in self.candidates:
-            c.set_score(min_, max_)
+            c.set_theme_weight(min_, max_)
+
+    def build_candidate_graph(self) -> None:
+        """Builds bidirectional graph of candidates."""
+
+        if self.candidates == []:
+            return
+
+        candidate_graph = PhraseGraph(self.candidates)
+        for candidate in self.candidates:
+            candidate_graph.add_node(candidate)
+
+        nodes = len(self.candidates)
+
+        for node in candidate_graph.nodes:
+            for other in candidate_graph.nodes:
+                if node != other:
+                    candidate_graph.nodes[node].add_neighbor(
+                        candidate_graph.nodes[other], nodes)
+        self.candidate_graph = candidate_graph
+
+    def page_rank_candidates(self, top_n: int=10) -> List[Phrase]:
+        """Page Ranks candidate phrases."""
+        if self.candidate_graph is None:
+            return
+
+        for node in self.candidate_graph.nodes.values():
+            theme = node.phrase.theme_weight
+            d = 0.85
+            weights = []
+            neighbors = list(node.adj_nodes.keys())
+            for neighbor in neighbors:
+                out = node.adj_nodes[neighbor].incoming_edges
+                weights.append(node.adj_weights[neighbor] / out)
+            score = theme * (1 - d) + d * sum(weights)
+            node.phrase.score = score
 
         sorted_candidates = sorted(self.candidates, 
             key=lambda x: x.score)[::-1]

@@ -11,19 +11,17 @@ class Glove(object):
 
     Attributes
     ----------
-    path : str
     embeddings : Dict[str, np.float64]
         Dictionary of GloVe embeddings
     dim : int
         Dimension of GloVe embeddings
     """
 
-    def __init__(self, path) -> None:
-        self.path = path
-        self.embeddings = self.__read_glove()
-        self.dim = len(self.embeddings[list(self.embeddings.keys())[0]])
+    def __init__(self, path: str) -> None:
+        self.embeddings = self.__read_glove(path)
+        self.dim = self.__get_dim()
 
-    def __read_glove(self) -> Dict[str, np.float64]:
+    def __read_glove(self, path: str) -> Dict[str, np.float64]:
         """Reads GloVe vectors into a dictionary, where
            the words are the keys, and the vectors are the values.
 
@@ -31,7 +29,7 @@ class Glove(object):
         -------
         word_vectors : Dict[str, np.float64]
         """
-        with open(self.path, 'r') as f:
+        with open(path, 'r') as f:
             data = f.readlines()
         word_vectors = {}
         for row in data:
@@ -43,3 +41,6 @@ class Glove(object):
                 vector.append(float(el))
             word_vectors[word] = np.array(vector)
         return word_vectors
+
+    def __get_dim(self) -> int:
+        return len(self.embeddings[list(self.embeddings.keys())[0]])
