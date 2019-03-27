@@ -1,3 +1,6 @@
+# More things to test about both the Document object
+# and the Phrase object
+
 import pytest
 from key2vec.glove import Glove
 from key2vec.docs import Document, Phrase
