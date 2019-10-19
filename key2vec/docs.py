@@ -8,13 +8,13 @@ import numpy as np
 def cosine_similarity(a: np.float64, b: np.float64) -> float:
     norm_a = np.linalg.norm(a)
     norm_b = np.linalg.norm(b)
-    if norm_b == 0:
+    if norm_a == 0 or norm_b == 0:
         return -1
     return np.dot(a, b) / (norm_a * norm_b)
 
 def _filter_words(text: str) -> List[str]:
-    words = wordpunct_tokenize(text)
-    words_filter = [word.lower() for word in words
+    tokens = wordpunct_tokenize(text)
+    words_filter = [word.lower() for word in tokens
                 if set(word).isdisjoint(PUNCT_SET)]
     return words_filter
 
@@ -37,14 +37,14 @@ class Document(object):
         Document embedding built from average of GloVe embeddings.
     """
 
-    def __init__(self, 
+    def __init__(self,
                 text: str, 
                 glove: Glove) -> None:
         self.text = text
         self.dim = glove.dim
         self.embedding = self.__embed_document(glove.embeddings)
 
-    def __embed_document(self, 
+    def __embed_document(self,
                 embeddings: Dict[str, np.float64]) -> np.float64:
         words = wordpunct_tokenize(self.text.lower())
         vector = np.zeros(self.dim)
@@ -113,6 +113,9 @@ class Phrase(Document):
         self.score = None
         self.rank = None
 
+    def __str__(self) -> str:
+        return self.text
+
     def set_theme_weight(self, 
                 min_: float, 
                 max_: float) -> None:
@@ -123,9 +126,6 @@ class Phrase(Document):
     def calc_pmi(self, phrase, candidates: int):
         """Calculates point-wise mutual information between
         one candidate phrase and another."""
-
-        # PMI isn't being calculated correctly. Needs to
-        # be between 0 and 1.
         prob_phrase_one = len(self.positions) / candidates
         prob_phrase_two = len(phrase.positions) / candidates
         cooccur = 0
@@ -133,7 +133,7 @@ class Phrase(Document):
             if self.window.get(pos[0]) or self.window.get(pos[1]):
                 cooccur += 1
         prob_cooccur = cooccur / candidates
-        return prob_cooccur / (prob_phrase_one * prob_phrase_two)
+        return np.log(prob_cooccur / (prob_phrase_one * prob_phrase_two))
 
     def __get_positions(self) -> List[Tuple[int]]:
         """Gets positions a phrase is in."""

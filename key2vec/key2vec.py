@@ -49,13 +49,6 @@ class Key2Vec(object):
         `candidates` attributes to a list of Phrase objects.
         """ 
 
-        # Having a big problem with preprocessing here.
-        # When it doesn't recognize a character in the disctionary
-        # it throws a KeyError. It's right to throw those errors,
-        # since the cleaner library should remove values like
-        # those from consideration before they're added to the candidates
-        # dictionary
-
         sentences = sent_tokenize(self.doc.text)
         candidates = {}
         for sentence in sentences:
@@ -69,12 +62,18 @@ class Key2Vec(object):
         for token in doc:
             text = token.text.lower()
             not_punct = set(text).isdisjoint(PUNCT_SET)
-            is_dash = text == '-'
             is_stopword = text in STOPWORDS
             in_candidates = candidates.get(text) is not None
-            if not_punct and not (is_stopword or in_candidates):
-                candidates[text] = Phrase(text, self.doc, 
-                    self.glove)
+            not_empty = text != ''
+            keep = (not_punct
+                and not_empty
+                and not (is_stopword or in_candidates))
+            if keep:
+                try:
+                    candidates[text] = Phrase(text, self.doc, 
+                        self.glove)
+                except KeyError:
+                    next
             else:
                 pass
         return candidates
@@ -86,8 +85,11 @@ class Key2Vec(object):
             in_candidates = candidates.get(cleaned_text) is not None
             not_empty = cleaned_text != ''
             if not (is_ent_to_ignore or in_candidates) and not_empty:
-                candidates[cleaned_text] = Phrase(cleaned_text, self.doc,
-                    self.glove)
+                try:
+                    candidates[cleaned_text] = Phrase(cleaned_text, self.doc,
+                        self.glove)
+                except KeyError:
+                    next
         return candidates
 
     def __extract_noun_chunks(self, doc, candidates):
@@ -95,8 +97,11 @@ class Key2Vec(object):
             cleaned_text = Cleaner(chunk).transform_text()
             not_empty = cleaned_text != ''
             if candidates.get(cleaned_text) is None and not_empty:
-                candidates[cleaned_text] = Phrase(cleaned_text, 
-                    self.doc, self.glove)
+                try:
+                    candidates[cleaned_text] = Phrase(cleaned_text, 
+                        self.doc, self.glove)
+                except KeyError:
+                    next
         return candidates
 
     def set_theme_weights(self) -> List[Phrase]:

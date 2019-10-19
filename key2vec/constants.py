@@ -1,6 +1,22 @@
 import string
 
-PUNCT_SET = set(string.punctuation)
+PUNCT_SET = list(set(string.punctuation))
+PUNCT_SET.append(u'\u201c')
+PUNCT_SET.append(u'\u201d')
+PUNCT_SET.append(u'\u2018')
+PUNCT_SET.append(u'\u2019')
+PUNCT_SET.append(u'\u2014')
+PUNCT_SET.append(b'\xe2\x80\x9c')
+PUNCT_SET.append('\n')
+PUNCT_SET.append('\\')
+PUNCT_SET.append('\"')
+PUNCT_SET.append('\a')
+PUNCT_SET.append('\f')
+PUNCT_SET.append('\n')
+PUNCT_SET.append('\r')
+PUNCT_SET.append('\t')
+PUNCT_SET.append('\v')
+PUNCT_SET = set(PUNCT_SET)
 
 POS_BLACKLIST = ['INTJ', 'AUX', 'CCONJ', 
             'ADP', 'DET', 'NUM', 'PART', 
